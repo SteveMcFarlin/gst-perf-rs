@@ -1,2 +1,2 @@
 # perf-rs
-Port of the get perf plugin from RidgeRun to Rust
+Port of RidgeRun's [GstPef](https://github.com/RidgeRun/gst-perf) plugin to Rust.
