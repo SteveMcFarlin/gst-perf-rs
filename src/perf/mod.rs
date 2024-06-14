@@ -9,5 +9,5 @@ glib::wrapper! {
 }
 
 pub fn register(plugin: &gst::Plugin) -> Result<(), glib::BoolError> {
-    gst::Element::register(Some(plugin), "rsperf", gst::Rank::NONE, Perf::static_type())
+    gst::Element::register(Some(plugin), "perf", gst::Rank::NONE, Perf::static_type())
 }
