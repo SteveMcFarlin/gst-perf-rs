@@ -16,14 +16,24 @@ static CAT: Lazy<gst::DebugCategory> = Lazy::new(|| {
     )
 });
 
+const PRINT_CPU_LOAD: bool = false;
+const BITRATE_WINDOW_SIZE: u32 = 0;
+const BITRATE_INTERVAL: u32 = 100;
+
 #[derive(Debug)]
 struct Settings {
-    collect: bool,
+    print_cpu_load: bool,
+    bitrate_interval: u32,
+    bitrate_window_size: u32,
 }
 
 impl Default for Settings {
     fn default() -> Self {
-        Self { collect: false }
+        Self {
+            print_cpu_load: PRINT_CPU_LOAD,
+            bitrate_interval: BITRATE_INTERVAL,
+            bitrate_window_size: BITRATE_WINDOW_SIZE,
+        }
     }
 }
 
@@ -42,11 +52,23 @@ impl ObjectSubclass for Perf {
 impl ObjectImpl for Perf {
     fn properties() -> &'static [glib::ParamSpec] {
         static PROPERTIES: Lazy<Vec<glib::ParamSpec>> = Lazy::new(|| {
-            vec![glib::ParamSpecBoolean::builder("collect")
-                .nick("Collect")
-                .blurb("Collect performance data")
-                .default_value(false)
-                .build()]
+            vec![
+                glib::ParamSpecBoolean::builder("print-cpu-load")
+                    .nick("Print CPU load")
+                    .blurb("Print the CPU load info")
+                    .default_value(PRINT_CPU_LOAD)
+                    .build(),
+                glib::ParamSpecUInt::builder("bitrate-interval")
+                    .nick("Interval between bitrate calculation in ms")
+                    .blurb("Interval between two calculations in ms, this will run even when no buffers are received")
+                    .default_value(BITRATE_INTERVAL)
+                    .build(),
+                glib::ParamSpecUInt::builder("bitrate-window-size")
+                    .nick("Bitrate moving average window size")
+                    .blurb("Number of samples used for bitrate moving average window size, 0 is all samples")
+                    .default_value(BITRATE_WINDOW_SIZE)
+                    .build(),
+            ]
         });
 
         PROPERTIES.as_ref()
@@ -54,11 +76,23 @@ impl ObjectImpl for Perf {
 
     fn set_property(&self, _id: usize, value: &glib::Value, pspec: &glib::ParamSpec) {
         match pspec.name() {
-            "collect" => {
-                let collect = value.get().expect("type checked upstream");
+            "print-cpu-load" => {
+                let print_cpu_load = value.get().expect("type checked upstream");
                 let mut settings = self.settings.lock().unwrap();
-                gst::info!(CAT, imp: self, "Changing collect to {}", collect);
-                settings.collect = collect;
+                gst::info!(CAT, imp: self, "Changing print-cpu-load to {}", print_cpu_load);
+                settings.print_cpu_load = print_cpu_load;
+            }
+            "bitrate-window-size" => {
+                let bitrate_window_size = value.get().expect("type checked upstream");
+                let mut settings = self.settings.lock().unwrap();
+                gst::info!(CAT, imp: self, "Changing bitrate-window-size to {}", bitrate_window_size);
+                settings.bitrate_window_size = bitrate_window_size;
+            }
+            "bitrate-interval" => {
+                let bitrate_interval = value.get().expect("type checked upstream");
+                let mut settings = self.settings.lock().unwrap();
+                gst::info!(CAT, imp: self, "Changing bitrate-interval to {}", bitrate_interval);
+                settings.bitrate_interval = bitrate_interval;
             }
             _ => unimplemented!(),
         }
@@ -66,9 +100,17 @@ impl ObjectImpl for Perf {
 
     fn property(&self, _id: usize, pspec: &glib::ParamSpec) -> glib::Value {
         match pspec.name() {
-            "collect" => {
+            "print-cpu-load" => {
                 let settings = self.settings.lock().unwrap();
-                settings.collect.to_value()
+                settings.print_cpu_load.to_value()
+            }
+            "bitrate-window-size" => {
+                let settings = self.settings.lock().unwrap();
+                settings.bitrate_window_size.to_value()
+            }
+            "bitrate-interval" => {
+                let settings = self.settings.lock().unwrap();
+                settings.bitrate_interval.to_value()
             }
             _ => unimplemented!(),
         }
@@ -120,5 +162,3 @@ impl BaseTransformImpl for Perf {
     const PASSTHROUGH_ON_SAME_CAPS: bool = false;
     const TRANSFORM_IP_ON_PASSTHROUGH: bool = true;
 }
-// impl VideoFilterImpl for Perf {}
-// impl AudioFilterImpl for Perf {}
