@@ -24,6 +24,12 @@ impl ObjectSubclass for Perf {
     type ParentType = gst::Element;
 }
 
+impl Default for Perf {
+    fn default() -> Self {
+        Perf {}
+    }
+}
+
 impl ObjectImpl for Perf {}
 impl GstObjectImpl for Perf {}
 
